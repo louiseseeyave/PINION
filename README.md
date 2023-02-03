@@ -8,7 +8,7 @@ This project aims at accelerating radiative transfer simulation with physics inf
 
 # Network architecture
 
-<img src="pinion_scheme.png" alt="Scheme of PINION" title="Employee Data title">
+<img src="pipeline.png" alt="Scheme of PINION" title="Employee Data title">
 
 # Repository structure
 
