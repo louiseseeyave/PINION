@@ -48,7 +48,6 @@ def PBC(arr, *slices):
 def _get_files(path, datatype, extension='npz'):
     """
     Returns a dictionary of all files to load with their associated redshift.
-
     PARAMETERS
     ----------
     datatype: str
@@ -84,7 +83,6 @@ def _get_files(path, datatype, extension='npz'):
 def load(files, memmap, full_cube_size=300, num_of_redshifts=46):
     """
     Loads the data.
-
     PARAMETERS
     ----------
     memmap: bool
@@ -101,7 +99,9 @@ def load(files, memmap, full_cube_size=300, num_of_redshifts=46):
     for i, (z, filename) in tqdm(enumerate(files.items()), desc="Reading data...", total=num_of_redshifts):
         # load the data.
         if memmap:
-            data[i,:,:,:] = np.load(filename, mmap_mode='r')
+            # the data is saved under a header 'arr_0'
+            # and has to be reshaped
+            data[i,:,:,:] = np.load(filename, mmap_mode='r')['arr_0'].reshape((300,300,300))
         else:
             data[i,:,:,:] = np.load(filename, mmap_mode=None)
 
@@ -117,7 +117,6 @@ def load(files, memmap, full_cube_size=300, num_of_redshifts=46):
 def index_from_coord(i, j, k, side_size, full_size=300):
         """
         For the subdivision of the datacube, returns the index of the subcube for given coordinates
-
         PARAMETERS
         ----------
         i,j,k: int, int, int
@@ -134,7 +133,6 @@ def index_from_coord(i, j, k, side_size, full_size=300):
 def coord_from_index(index, side_size, full_size=300):
     """
     For the subdivision of the datacube, returns the coordinates of the subcube for given index
-
     The conventional order for subcubes indices is:
     index = 0
     for i:

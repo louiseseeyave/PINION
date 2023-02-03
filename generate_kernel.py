@@ -4,7 +4,6 @@ import itertools
 def generate_kernel(radius, dim=3):
     """
     Generate the correct kernel for the task
-
     radius: float
         The radius of the circle
     dim: int (Default: 3)
@@ -35,5 +34,5 @@ def generate_kernel(radius, dim=3):
         # 3) apply 
         kernel[tuple(coords)] = val
 
-    # clip to only have values between 0 and 1     
+    # clip to only have values between 0 and 1     
     return np.clip(kernel, 0, 1)

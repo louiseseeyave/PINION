@@ -5,7 +5,6 @@ class CentralCNNV2(nn.Module):
     def __init__(self, n_input_channel, n_output_val, n_pool, n_features, kernel_size, data_input_size, n_fcn_layers, fcn_div_factor=2, maxpool_size=2, maxpool_stride=2):
         """
         Initializes the CentralCNN.
-
         The structure of the network is the following:
         - First start with a subvolume of nsrc, rho and the propagating mask
         - convolve it until some point
@@ -13,7 +12,6 @@ class CentralCNNV2(nn.Module):
         - Append time in the flatten result
         - Use this as the input for a FCN
         - Output x at the end
-
         n_input_channel: int
             Number of input channels
         n_output_val: int

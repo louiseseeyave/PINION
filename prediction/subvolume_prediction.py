@@ -1,13 +1,14 @@
+# What is this unique ID?
 # Pick the Unique ID from the training
 UID = 'DMFMXM'
 
 # Selects the root of the project
-project_root = "/path/to/project/root"
+project_root = "/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/"
 
 # Choose the path to the simulation files to load, and the folders to save the model and the subvolumes
-filepath = '/path/to/simulations/files/'
-modelpath = '/path/to/models/folder/'
-export   = '/path/to/subvolume/export/folder/'
+filepath = '/cosma8/data/dp004/dc-seey1/ml_reion/data/AI4EoR_dataset/'
+modelpath = '/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/louise_models/'
+export   = '/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/louise_subvolumes/'
 
 # Depending on your system, you may want to disable the memory mapping.
 memmap = True
@@ -17,6 +18,8 @@ memmap = True
 from calendar import different_locale
 from dataclasses import dataclass
 
+# @dataclass adds generated special methods such as __init__() and __repr__() to user-defined classes
+# so that, in the case of __init__(), self.kernel_size = kernel_size and etc.
 @dataclass
 class Config:
     """Keeps track of the current config."""
@@ -40,30 +43,33 @@ class Config:
 
     def __str__(self):
         return f"""Run configuration:
---------------------------------
-kernel_size: {self.kernel_size}
-n_pool: {self.n_pool}
-nb_train: {self.nb_train}
-nb_test: {self.nb_test}
-subvolume_size: {self.subvolume_size}
-batch_size: {self.batch_size}
-show: {self.show}
-nb_epoch: {self.nb_epoch}
-plot_size: {self.plot_size}
-pinn_multiplication_factor: {self.pinn_multiplication_factor}
-fcn_div_factor: {self.fcn_div_factor}
-n_fcn_layers: {self.n_fcn_layers}
-n_features: {self.n_features}
-score: {self.score}
-maxpool_size: {self.maxpool_size}
-maxpool_stride: {self.maxpool_stride}
---------------------------------
-"""
+                --------------------------------
+                kernel_size: {self.kernel_size}
+                n_pool: {self.n_pool}
+                nb_train: {self.nb_train}
+                nb_test: {self.nb_test}
+                subvolume_size: {self.subvolume_size}
+                batch_size: {self.batch_size}
+                show: {self.show}
+                nb_epoch: {self.nb_epoch}
+                plot_size: {self.plot_size}
+                pinn_multiplication_factor: {self.pinn_multiplication_factor}
+                fcn_div_factor: {self.fcn_div_factor}
+                n_fcn_layers: {self.n_fcn_layers}
+                n_features: {self.n_features}
+                score: {self.score}
+                maxpool_size: {self.maxpool_size}
+                maxpool_stride: {self.maxpool_stride}
+                --------------------------------
+                """
 
 
 # Choose the relevant configuration
-myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64, score='r2', maxpool_stride=1, nb_train=4000, nb_test=500, batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=True)
+myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
+                  score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
+                  batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=True)
 
+# I'm confused. Why can't you just specify the parameters here?
 kernel_size = myconfig.kernel_size
 n_pool = myconfig.n_pool
 nb_train = myconfig.nb_train
@@ -113,8 +119,8 @@ if len(sys.argv) > 3:
     print("Program does not understand extra arguments. Expected input:\npython pipeline_full.py {subcube_size} {execution_number}")
     sys.exit()
 elif len(sys.argv) == 3:
-    cube_size = int(sys.argv[1])
-    exec_idx = int(sys.argv[2])
+    cube_size = int(sys.argv[1]) # size of the cube
+    exec_idx = int(sys.argv[2]) # TASK_ID i.e. execution number
     assert 300%cube_size == 0, f"300 isn't a multiple of {cube_size}: 300%{cube_size}={300%cube_size}"
     assert exec_idx < (300//cube_size)**3
 else:
@@ -137,13 +143,14 @@ print("-------------")
 
 
 # prepare the files
-redshifts_str, files_irate  = tools._get_files(filepath, 'irate')
-redshifts_str, files_xHII   = tools._get_files(filepath, 'xHII')
-redshifts_str, files_rho   = tools._get_files(filepath, 'rho')
-redshifts_str, files_nsrc   = tools._get_files(filepath, 'nsrc')
-redshifts_str, files_mask  = tools._get_files(filepath, 'mask') 
+redshifts_str, files_irate  = tools._get_files(filepath, 'irate')#, extension='dat')
+redshifts_str, files_xHII   = tools._get_files(filepath, 'xHII')#, extension='dat')
+redshifts_str, files_rho   = tools._get_files(filepath, 'overd')#, extension='dat')
+redshifts_str, files_msrc   = tools._get_files(filepath, 'msrc')#, extension='dat')
+redshifts_str, files_mask  = tools._get_files(filepath, 'mask')#, extension='dat') 
 
 
+# load overdensity data
 redshifts_arr, overdensity_arr = tools.load(files_rho, memmap) # unitless
 overdensity_arr               *= (u.m/u.m)
 rhoc0                          = cosmo.critical_density0 # g/cm3
@@ -153,13 +160,14 @@ rho_arr                        = tools.PBC(rho_arr, ts, xs, ys, zs)
 # overdensity_arr = overdensity_arr[ts, xs, ys, zs]
 del overdensity_arr
 
-
-redshifts_arr, nsrc_arr        = tools.load(files_nsrc, memmap) # unitless
-nsrc_arr                      *= (u.m/u.m)
-nsrc_max                       = np.max(nsrc_arr)
-nsrc_arr                       = tools.PBC(nsrc_arr, ts, xs, ys, zs)
+# load mass of sources (changed from nsrc to msrc)
+redshifts_arr, msrc_arr        = tools.load(files_msrc, memmap) # unit mass
+msrc_arr                      *= (u.m/u.m)
+msrc_max                       = np.max(msrc_arr)
+msrc_arr                       = tools.PBC(msrc_arr, ts, xs, ys, zs)
 # nsrc_arr = nsrc_arr[ts, xs, ys, zs]
 
+# load mask
 redshifts_arr, mask_arr        = tools.load(files_mask, memmap) # unitless
 mask_arr                      *= (u.m/u.m)
 mask_max                       = np.max(mask_arr)
@@ -172,7 +180,7 @@ redshifts_arr *= (u.m/u.m)
 print(redshifts_arr)
 time_arr = np.asarray([cosmo.age(z).to(u.s).value for z in redshifts_arr], dtype=np.float32) * u.s
 time_max = np.max(time_arr)
-norm_time_arr = time_arr / time_max
+norm_time_arr = time_arr / time_max # what's the normalisation for?
 
 # produce the data to export
 # training
@@ -185,21 +193,23 @@ print(f"indices: {indices[:,5]}")
 print(indices.shape)
 
 for i in tqdm(range(indices.shape[1]), desc="Creating training batches"):
-    training_set[i*46:(i+1)*46, 0] =   nsrc_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / nsrc_max
+    training_set[i*46:(i+1)*46, 0] =   msrc_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / msrc_max
     training_set[i*46:(i+1)*46, 1] =    rho_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / rho_max
     training_set[i*46:(i+1)*46, 2] =   mask_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / mask_max
     training_time[i*46:(i+1)*46]   = norm_time_arr
 
-
+# tell autograd not to record operations on this tensor
+# idk what this means
 training_set  = torch.from_numpy(training_set).requires_grad_(False)
 training_time = torch.from_numpy(training_time).requires_grad_(False)
 
 # load the model
-model = cnn.CentralCNNV2(3, 1, n_pool, n_features, kernel_size, subvolume_size, n_fcn_layers, fcn_div_factor, maxpool_size, maxpool_stride).to(device)
+model = cnn.CentralCNNV2(3, 1, n_pool, n_features, kernel_size, subvolume_size,
+                         n_fcn_layers, fcn_div_factor, maxpool_size, maxpool_stride).to(device)
 model.eval()
 model.load_state_dict(torch.load(f"{modelpath}C-CNN-V2-model-{UID}.pt", map_location=device))
 
-# prediciton
+# prediction
 length = training_set.shape[0]//46
 
 prediction = np.zeros((46*cube_size**3), dtype=np.float32)

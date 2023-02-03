@@ -5,9 +5,7 @@ import numpy as np
 class R2Score(nn.Module):
     """
     R2 score following wikipedia's definition: https://en.wikipedia.org/wiki/Coefficient_of_determination 
-
     Note that it's "inverted" because 0 is the best result and 1 the worst.
-
     The true definition is R^2 = 1 - SSres/SStot
     But we use: R^2 = SSres/SStot
     
@@ -31,9 +29,7 @@ class R2Score(nn.Module):
 class InvertedR2Score(nn.Module):
     """
     R2 score following wikipedia's definition: https://en.wikipedia.org/wiki/Coefficient_of_determination 
-
     Note that it's "inverted" because 0 is the best result and 1 the worst.
-
     The true definition is R^2 = 1 - SSres/SStot
     But we use: R^2 = SSres/SStot
     
