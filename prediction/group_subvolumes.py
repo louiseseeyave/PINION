@@ -1,13 +1,13 @@
 # Selects Unique ID from training + additionnal information added to file name 
-UID = '3FGQC1'
+UID = 'S7X9TJ'
 ADD = ''
 
 # Selects the root of the project
-project_root = "/path/to/project/root"
+project_root = "/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/"
 
 # Some other options
-subcube_path  = '/path/to/subvolume/folder/' # import folder
-fullcube_path = '/path/to/fullvolume/folder' # export folder
+subcube_path  = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_subvolumes' # import folder
+fullcube_path = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_fullvolume' # export folder
 memmap = True # Memory mapping should be disabled on some systems
 
 import os

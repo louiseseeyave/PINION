@@ -1,19 +1,20 @@
-# What is this unique ID?
 # Pick the Unique ID from the training
-UID = 'DMFMXM'
+UID = 'TESTNP'
+# UID = 'S7X9TJ'
 
 # Selects the root of the project
-project_root = "/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/"
+project_root = "/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/"
 
 # Choose the path to the simulation files to load, and the folders to save the model and the subvolumes
-filepath = '/cosma8/data/dp004/dc-seey1/ml_reion/data/AI4EoR_dataset/'
-modelpath = '/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/louise_models/'
-export   = '/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/louise_subvolumes/'
+filepath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/data/AI4EoR_dataset/'
+# modelpath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_models/'
+modelpath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/models/'
+export   = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_subvolumes/'
 
 # Depending on your system, you may want to disable the memory mapping.
 memmap = True
 
-
+print('importing stuff')
 # training settings dataclass
 from calendar import different_locale
 from dataclasses import dataclass
@@ -67,9 +68,8 @@ class Config:
 # Choose the relevant configuration
 myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
                   score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
-                  batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=True)
+                  batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=False)
 
-# I'm confused. Why can't you just specify the parameters here?
 kernel_size = myconfig.kernel_size
 n_pool = myconfig.n_pool
 nb_train = myconfig.nb_train
@@ -240,6 +240,6 @@ file = f'xHII_{UID}_cubesize{cube_size}_idx{exec_idx}.npz'
 filepath_result = export + file
 print("writing: ", filepath_result)
 
-#s save the result
+#save the result
 with open(filepath_result, 'wb') as nf:
     np.save(nf, reshaped_prediction)

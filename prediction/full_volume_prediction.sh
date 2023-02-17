@@ -1,17 +1,33 @@
-#!/bin/sh
-## This is the settings for Slurm that we used
-## This is only a template that you need to modify.
-#SBATCH --chdir ##### <- should be the path to project's root
-#SBATCH --job-name="PINN4Rei"
-#SBATCH --nodes 1
-#SBATCH --time 00:30:00
-#SBATCH --account sk02
-#SBATCH --output logs/cscs/slurm-%j.out
-#SBATCH --error logs/cscs/slurm-%j.err
-#SBATCH --partition=normal
-#SBATCH --constraint=gpu
-#SBATCH --mem 62464
-#SBATCH --array=0-1000%100
+#!/bin/bash
+
+# set the number of nodes
+#SBATCH --nodes=1
+
+# set max wallclock time
+#SBATCH --time=00:30:00
+
+# set name of job
+#SBATCH --job-name=Pred-AI4Reion
+
+# set number of GPUs
+#SBATCH --gres=gpu:1
+
+# mail alert at start, end and abortion of execution
+#SBATCH --mail-type=ALL
+
+# send mail to this address
+#SBATCH --mail-user=l.seeyave@sussex.ac.uk
+
+# choose which partition to use
+#SBATCH --partition=devel
+
+# store logs
+#SBATCH --output logs/slurm-%j.stdout
+#SBATCH --error logs/slurm-%j.stdout
+
+#SBATCH --array=111-1000%100
+
+# run the application
 
 echo STARTING AT `date`
 echo "Setting up enviroment to use MPI..."
@@ -24,17 +40,25 @@ NDOMAINS=1000
 # module load daint-gpu
 # export CRAY_CUDA_MPS=1
 
+echo "Loading modules..."
+module purge
+module load python/3.8.6
+
+echo "Activating pyenv..."
 # Activate your python environnement here
-source /path/to/python/env/activate
+source ~/venvs/pyenv/bin/activate
 
+echo "PYTHONPATH..."
 # The path to the root the project to load the python modules
-export PYTHONPATH="/path/to/project/root"
+# export PYTHONPATH="/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/"
 
+echo "Defining task number..."
 # Define the task number
 TASK_ID=$(( ${SLURM_ARRAY_TASK_ID} - 1 ))
 echo "Task ${TASK_ID}/${NDOMAINS}"
 
+echo "Executing script..."
 # Execute the script for subvolume $TASK_ID
-srun python prediction/subvolume_prediction.py $CUBESIZE $TASK_ID &> logs/cscs/slurm-${SLURM_ARRAY_JOB_ID}_${TASK_ID}-stdout.out
+srun python subvolume_prediction.py $CUBESIZE $TASK_ID # &> logs/slurm-${SLURM_ARRAY_JOB_ID}_${TASK_ID}.stdout
 
 echo FINISHED AT `date`

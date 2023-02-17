@@ -10,11 +10,11 @@
 enable_pinn = False
 
 # Selects the root of the project
-project_root = "/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/"
+project_root = "/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/"
 
 # files location
-filepath = '/cosma8/data/dp004/dc-seey1/ml_reion/data/AI4EoR_dataset/' # macos
-savepath = '/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/louise_models/'
+filepath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/data/AI4EoR_dataset/'
+savepath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_models/'
 memmap = True
 
 # training settings
@@ -65,7 +65,7 @@ maxpool_stride: {self.maxpool_stride}
 """
 
 # Choice of configuration
-myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64, score='r2', maxpool_stride=1, nb_train=4000, nb_test=500, batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=True)
+myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64, score='r2', maxpool_stride=1, nb_train=4000, nb_test=500, batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=False)
 
 kernel_size = myconfig.kernel_size
 n_pool = myconfig.n_pool
@@ -89,11 +89,6 @@ maxpool_stride = myconfig.maxpool_stride
 import os
 os.chdir(project_root)
 print("working from: " + os.getcwd())
-
-# just testing something
-#import sys
-#print('sys.path:', sys.path)
-#sys.path.remove('/cosma/home/dp004/dc-seey1/.local/lib/python3.9/site-packages')
 
 import numpy as np
 import torch
@@ -434,10 +429,7 @@ reload(r2s)
 
 # 1) Define the models
 model = cnn.CentralCNNV2(3, 1, n_pool, n_features, kernel_size, subvolume_size, n_fcn_layers, fcn_div_factor, maxpool_size, maxpool_stride).to(device)
-if enable_pinn==True:
-    UID = 'PFD' + generate_random_string(6) # id to save stuff and avoid overriding plots.
-else:
-    UID = 'NP' + generate_random_string(6) # id to save stuff and avoid overriding plots.
+UID = generate_random_string(6) # id to save stuff and avoid overriding plots.
 print(f"Unique ID for this run: {UID}")
 
 from torchinfo import summary
@@ -712,5 +704,7 @@ for epoch in tqdm(range(nb_epoch), desc="Iterating epoch", position=0):
 
 print(UID)
 
-# save: the losses and the best epoch 
+print('current working dir:', os.getcwd())
+
+# save: the losses and the best epoch
 np.savez(f'loss/C-CNN-V2-{UID}.npz', train_total=total_losses, train_data=data_losses, train_pinn=pinn_losses, losses_validation=validation_losses, learning_rates=learning_rates)
