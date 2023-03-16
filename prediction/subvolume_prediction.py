@@ -14,7 +14,6 @@ export   = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_subvol
 # Depending on your system, you may want to disable the memory mapping.
 memmap = True
 
-print('importing stuff')
 # training settings dataclass
 from calendar import different_locale
 from dataclasses import dataclass
@@ -143,12 +142,12 @@ print("-------------")
 
 
 # prepare the files
-redshifts_str, files_irate  = tools._get_files(filepath, 'irate')#, extension='dat')
-redshifts_str, files_xHII   = tools._get_files(filepath, 'xHII')#, extension='dat')
-redshifts_str, files_rho   = tools._get_files(filepath, 'overd')#, extension='dat')
-redshifts_str, files_msrc   = tools._get_files(filepath, 'msrc')#, extension='dat')
-redshifts_str, files_mask  = tools._get_files(filepath, 'mask')#, extension='dat') 
-
+redshifts_str, files_irate  = tools._get_files(filepath, 'irate')
+redshifts_str, files_xHII   = tools._get_files(filepath, 'xHII')
+redshifts_str, files_rho   = tools._get_files(filepath, 'overd')
+redshifts_str, files_msrc   = tools._get_files(filepath, 'msrc')
+redshifts_str, files_mask  = tools._get_files(filepath, 'mask')
+redshifts_str, files_cluster  = tools._get_files(filepath, 'cluster') 
 
 # load overdensity data
 redshifts_arr, overdensity_arr = tools.load(files_rho, memmap) # unitless
@@ -173,6 +172,12 @@ mask_arr                      *= (u.m/u.m)
 mask_max                       = np.max(mask_arr)
 mask_arr                       = tools.PBC(mask_arr, ts, xs, ys, zs)
 
+# load clustering
+redshifts_arr, mask_arr        = tools.load(files_cluster, memmap) # unitless
+cluster_arr                   *= (u.m/u.m)
+cluster_max                    = np.max(cluster_arr)
+cluster_arr                    = tools.PBC(cluster_arr, ts, xs, ys, zs)
+
 redshifts_arr *= (u.m/u.m)
 
 
@@ -180,11 +185,11 @@ redshifts_arr *= (u.m/u.m)
 print(redshifts_arr)
 time_arr = np.asarray([cosmo.age(z).to(u.s).value for z in redshifts_arr], dtype=np.float32) * u.s
 time_max = np.max(time_arr)
-norm_time_arr = time_arr / time_max # what's the normalisation for?
+norm_time_arr = time_arr / time_max
 
 # produce the data to export
 # training
-training_set = np.zeros((46*cube_size**3, 3, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
+training_set = np.zeros((46*cube_size**3, 4, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
 training_time = np.zeros((46*cube_size**3), dtype=np.float32)
 
 # get the coordinates of the points that will be predicted
@@ -194,8 +199,9 @@ print(indices.shape)
 
 for i in tqdm(range(indices.shape[1]), desc="Creating training batches"):
     training_set[i*46:(i+1)*46, 0] =   msrc_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / msrc_max
-    training_set[i*46:(i+1)*46, 1] =    rho_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / rho_max
+    training_set[i*46:(i+1)*46, 1] =   rho_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / rho_max
     training_set[i*46:(i+1)*46, 2] =   mask_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / mask_max
+    training_set[i*46:(i+1)*46, 3] =   cluster_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / cluster_max
     training_time[i*46:(i+1)*46]   = norm_time_arr
 
 # tell autograd not to record operations on this tensor
@@ -235,7 +241,7 @@ print(reshaped_prediction.shape, torch.min(reshaped_prediction), torch.max(resha
 reshaped_prediction = reshaped_prediction.detach().numpy()
 
 # prepare the file for saving the result.
-file = f'xHII_{UID}_cubesize{cube_size}_idx{exec_idx}.npz'
+file = f'xHII_{UID}_cubesize{cube_size}_idx{exec_idx}.npy'
 
 filepath_result = export + file
 print("writing: ", filepath_result)

@@ -6,8 +6,8 @@ ADD = ''
 project_root = "/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/"
 
 # Some other options
-subcube_path  = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_subvolumes' # import folder
-fullcube_path = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_fullvolume' # export folder
+subcube_path  = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_subvolumes/' # import folder
+fullcube_path = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_fullvolume/' # export folder
 memmap = True # Memory mapping should be disabled on some systems
 
 import os
@@ -50,12 +50,18 @@ for idx in tqdm(range((full_cube_size//cube_size)**3), desc="Joining batches"):
     full_cube[:, cube_size*i:cube_size*(i+1), cube_size*j:cube_size*(j+1), cube_size*k:cube_size*(k+1)] = cube
 
 # manually select the redshifts
-redshifts = ['12.048', '11.791', '11.546', '11.313', '11.090', '10.877', '10.673', '10.478', '10.290', '10.110', '9.938', '9.771', '9.611', '9.457', '9.308', '9.164', '9.026', '8.892', '8.762', '8.636', '8.515', '8.397', '8.283', '8.172', '8.064', '7.960', '7.859', '7.760', '7.664', '7.570', '7.480', '7.391', '7.305', '7.221', '7.139', '7.059', '6.981', '6.905', '6.830', '6.757', '6.686', '6.617', '6.549', '6.483', '6.418', '6.354']
+redshifts = ['12.048', '11.791', '11.546', '11.313', '11.090', '10.877',
+             '10.673', '10.478', '10.290', '10.110', '9.938', '9.771',
+             '9.611', '9.457', '9.308', '9.164', '9.026', '8.892', '8.762',
+             '8.636', '8.515', '8.397', '8.283', '8.172', '8.064', '7.960',
+             '7.859', '7.760', '7.664', '7.570', '7.480', '7.391', '7.305',
+             '7.221', '7.139', '7.059', '6.981', '6.905', '6.830', '6.757',
+             '6.686', '6.617', '6.549', '6.483', '6.418', '6.354']
 assert len(redshifts) == ltime, f"Your redshifts are not matching your variable ltime: {len(redshifts)} should be equal to {ltime}."
 
 # save the full cubes
 for t in range(ltime):
-    file = f'xHII{ADD}_{UID}_z{redshifts[t]}.npz'
+    file = f'xHII{ADD}_{UID}_z{redshifts[t]}.npy'
 
     filepath_result = fullcube_path + file
     print("writing: ", filepath_result)

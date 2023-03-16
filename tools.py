@@ -45,7 +45,8 @@ def PBC(arr, *slices):
         return arr.__getitem__(slices)
     
 
-def _get_files(path, datatype, extension='npz'):
+def _get_files(path, datatype, extension='npy'):
+
     """
     Returns a dictionary of all files to load with their associated redshift.
     PARAMETERS
@@ -55,6 +56,7 @@ def _get_files(path, datatype, extension='npz'):
     extension: str (Default: 'npz')
         The file extension; must be numpy compatible.
     """
+
     # get list of files
     files = path+f"{datatype}_*.{extension}"
     all_files = glob.glob(path+f"{datatype}_*.{extension}")
@@ -81,27 +83,30 @@ def _get_files(path, datatype, extension='npz'):
 
 
 def load(files, memmap, full_cube_size=300, num_of_redshifts=46):
+
     """
     Loads the data.
     PARAMETERS
     ----------
     memmap: bool
-        Memory mapping, False loads the whole cube on the memory, True loads the "pointer" to the memory,
-        allowing to reduce the memory usage at the cost of higher load time. This option might be useful to
-        disable in some systems.
+        Memory mapping, False loads the whole cube on the memory, True
+        loads the "pointer" to the memory, allowing to reduce the memory
+        usage at the cost of higher load time. This option might be useful
+        to disable in some systems.
     full_cube_size: int (Default: 300)
         The grid size of the full volume
     num_of_redshifts: int (Default: 46)
         The number of snapshots for the simulation
     """
+
     redshifts, redshifts_str = [], []
-    data = np.zeros((num_of_redshifts, full_cube_size, full_cube_size, full_cube_size), dtype=np.float32)
-    for i, (z, filename) in tqdm(enumerate(files.items()), desc="Reading data...", total=num_of_redshifts):
+    data = np.zeros((num_of_redshifts, full_cube_size, full_cube_size,
+                     full_cube_size), dtype=np.float32)
+    for i, (z, filename) in tqdm(enumerate(files.items()), desc="Reading data...",
+                                 total=num_of_redshifts):
         # load the data.
         if memmap:
-            # the data is saved under a header 'arr_0'
-            # and has to be reshaped
-            data[i,:,:,:] = np.load(filename, mmap_mode='r')['arr_0'].reshape((300,300,300))
+            data[i,:,:,:] = np.load(filename, mmap_mode='r').reshape((300,300,300))
         else:
             data[i,:,:,:] = np.load(filename, mmap_mode=None)
 

@@ -1,11 +1,12 @@
 # GENERATE PROPAGATION MASK
 
-# Selects the root of the project
+# selects the root of the project
+# generate the mask on cosma, not jade
 project_root = "/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/"
 
 # files location
 filepath = "/cosma8/data/dp004/dc-seey1/ml_reion/data/AI4EoR_dataset/"
-memmap = True # Memory mapping might need to be disabled depending on the system
+memmap = True # memory mapping might need to be disabled depending on the system
 show = True
 
 import os
@@ -90,10 +91,10 @@ sorted_redshifts_str = [redshifts_str[idx] for idx in sort_idx]
 
 for i, z in enumerate(sorted_redshifts_str):
 
-    # just added 'test' to test this
-    newf = f"{filepath}test_mask_z{z}.npz"
+    newf = f"{filepath}test_mask_z{z}.npy" # just testing
+    # newf = f"{filepath}mask_z{z}.npy"
     print("{}: Writing: {}".format(i, newf))
     data = results[i,:,:,:]
     data.flatten(order='C').astype(np.float32)
     with open(newf, 'wb') as nf:
-        np.savez(nf, data)
+        np.save(nf, data)

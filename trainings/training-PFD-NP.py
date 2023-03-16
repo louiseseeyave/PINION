@@ -26,11 +26,11 @@ class Config:
     """Keeps track of the current config."""
     kernel_size: int = 3
     n_pool: int = 2
-    nb_train: int = 1000
-    nb_test: int = 10
-    subvolume_size: int = 19
+    nb_train: int = 1000 # number of training batches
+    nb_test: int = 10 # number of test batches
+    subvolume_size: int = 19 # what unit is this?
     batch_size: int = 4600//5
-    show: bool = False
+    show: bool = False # setting this to False enables plots to be saved
     nb_epoch: int = 400
     plot_size: int = 50
     pinn_multiplication_factor: float = 1.0
@@ -65,7 +65,9 @@ maxpool_stride: {self.maxpool_stride}
 """
 
 # Choice of configuration
-myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64, score='r2', maxpool_stride=1, nb_train=4000, nb_test=500, batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=False)
+myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
+                  score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
+                  batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=False)
 
 kernel_size = myconfig.kernel_size
 n_pool = myconfig.n_pool
@@ -120,8 +122,8 @@ redshifts_str, files_irate  = tools._get_files(filepath, 'irate')
 redshifts_str, files_xHII   = tools._get_files(filepath, 'xHII')
 redshifts_str, files_rho   = tools._get_files(filepath, 'overd')
 redshifts_str, files_nsrc   = tools._get_files(filepath, 'msrc')
-redshifts_str, files_mask  = tools._get_files(filepath, 'mask') 
-
+redshifts_str, files_mask  = tools._get_files(filepath, 'mask')
+redshifts_str, files_cluster  = tools._get_files(filepath, 'cluster') 
 
 # load the data
 redshifts_arr, irates_arr      = tools.load(files_irate, memmap) # 1/s
@@ -129,6 +131,7 @@ redshifts_arr, xHII_arr        = tools.load(files_xHII, memmap) # unitless
 redshifts_arr, overdensity_arr = tools.load(files_rho, memmap) # unitless
 redshifts_arr, nsrc_arr        = tools.load(files_nsrc, memmap) # unitless
 redshifts_arr, mask_arr        = tools.load(files_mask, memmap) # unitless
+redshifts_arr, cluster_arr     = tools.load(files_cluster, memmap) # unitless
 
 # apply units
 irates_arr /= u.s
@@ -137,6 +140,7 @@ overdensity_arr *= (u.m/u.m)
 redshifts_arr *= (u.m/u.m)
 nsrc_arr *= (u.m/u.m)
 mask_arr *= (u.m/u.m)
+cluster_arr *= (u.m/u.m)
 
 # Now we can convert all the data into their correct form.
 Om0 = cosmo.Om0
@@ -163,11 +167,13 @@ time_arr = np.asarray([cosmo.age(z).to(u.s).value for z in redshifts_arr], dtype
 time_max = np.max(time_arr)
 norm_time_arr = time_arr / time_max
 
-#irates_max = np.max(irates_arr)
+
+# get max values of each array - needed to normalise training data
+#irates_max = np.max(irates_arr) # wonder why this was commented out?
 nsrc_max = np.max(nsrc_arr)
 rho_max = np.max(rho_arr)
 mask_max = np.max(mask_arr)
-
+cluster_max = np.max(cluster_arr)
 irates_max = irates_arr.max()
 #log_irates_arr = np.log10(irates_max.value)/np.log10(irates_arr.value) # zero when nan or inf
 
@@ -176,50 +182,61 @@ irates_max = irates_arr.max()
 # Preparing the training set
 
 # choose the random subvolumes we'll consider.
-rand_train_i, rand_train_j, rand_train_k = np.random.randint(0, 300-subvolume_size, size=(3, nb_train))
-rand_test_i, rand_test_j, rand_test_k = np.random.randint(0, 300-subvolume_size, size=(3, nb_test))
+rand_train_i, rand_train_j, rand_train_k = np.random.randint(0, 300-subvolume_size,
+                                                             size=(3, nb_train))
+rand_test_i, rand_test_j, rand_test_k = np.random.randint(0, 300-subvolume_size,
+                                                          size=(3, nb_test))
 
 # training
-training_set = np.zeros((46*nb_train, 3, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
+training_set = np.zeros((46*nb_train, 4, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
 training_truth = np.zeros((46*nb_train, 1), dtype=np.float32)
 training_time = np.zeros((46*nb_train), dtype=np.float32)
 training_nh = np.zeros((46*nb_train), dtype=np.float32)
 training_irates = np.zeros((46*nb_train), dtype=np.float32)
 
 for batch in tqdm(range(nb_train), desc="Creating training batches"):
+
+    # populate training_set array with the training data
     training_set[batch*46:(batch+1)*46, 0]   =   nsrc_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / nsrc_max
-    training_set[batch*46:(batch+1)*46, 1]   =    rho_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / rho_max
+    training_set[batch*46:(batch+1)*46, 1]   =   rho_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / rho_max
     training_set[batch*46:(batch+1)*46, 2]   =   mask_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / mask_max
+    training_set[batch*46:(batch+1)*46, 3]   =   cluster_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / cluster_max
+
+    # populate the other arrays
     training_truth[batch*46:(batch+1)*46,0]  =   xHII_arr[:, (2*rand_train_i[batch]+subvolume_size)//2, (2*rand_train_j[batch]+subvolume_size)//2, (2*rand_train_k[batch]+subvolume_size)//2]
-    training_nh[batch*46:(batch+1)*46]       =     nh_arr[:, (2*rand_train_i[batch]+subvolume_size)//2, (2*rand_train_j[batch]+subvolume_size)//2, (2*rand_train_k[batch]+subvolume_size)//2]
-    training_irates[batch*46:(batch+1)*46]   = irates_arr[:, (2*rand_train_i[batch]+subvolume_size)//2, (2*rand_train_j[batch]+subvolume_size)//2, (2*rand_train_k[batch]+subvolume_size)//2]
-    training_time[batch*46:(batch+1)*46]     = norm_time_arr
+    training_nh[batch*46:(batch+1)*46]       =   nh_arr[:, (2*rand_train_i[batch]+subvolume_size)//2, (2*rand_train_j[batch]+subvolume_size)//2, (2*rand_train_k[batch]+subvolume_size)//2]
+    training_irates[batch*46:(batch+1)*46]   =   irates_arr[:, (2*rand_train_i[batch]+subvolume_size)//2, (2*rand_train_j[batch]+subvolume_size)//2, (2*rand_train_k[batch]+subvolume_size)//2]
+    training_time[batch*46:(batch+1)*46]     =   norm_time_arr
 
 
 # testing
-testing_set = np.zeros((46*nb_train, 3, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
+testing_set = np.zeros((46*nb_train, 4, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
 testing_truth = np.zeros((46*nb_train, 1), dtype=np.float32)
 testing_time = np.zeros((46*nb_train), dtype=np.float32)
 testing_nh = np.zeros((46*nb_train), dtype=np.float32)
 testing_irates = np.zeros((46*nb_train), dtype=np.float32)
 
-for batch in tqdm(range(nb_test), desc="Creating training batches"):
+for batch in tqdm(range(nb_test), desc="Creating testing batches"):
+
+    # populate testing_set array with the test data
     testing_set[batch*46:(batch+1)*46, 0]   =   nsrc_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / nsrc_max
-    testing_set[batch*46:(batch+1)*46, 1]   =    rho_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / rho_max
+    testing_set[batch*46:(batch+1)*46, 1]   =   rho_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / rho_max
     testing_set[batch*46:(batch+1)*46, 2]   =   mask_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / mask_max
+    testing_set[batch*46:(batch+1)*46, 3]   =   cluster_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / cluster_max
+    
     testing_truth[batch*46:(batch+1)*46, 0] =   xHII_arr[:, (2*rand_test_i[batch]+subvolume_size)//2, (2*rand_test_j[batch]+subvolume_size)//2, (2*rand_test_k[batch]+subvolume_size)//2]
-    testing_nh[batch*46:(batch+1)*46]       =     nh_arr[:, (2*rand_test_i[batch]+subvolume_size)//2, (2*rand_test_j[batch]+subvolume_size)//2, (2*rand_test_k[batch]+subvolume_size)//2]
-    testing_irates[batch*46:(batch+1)*46]   = irates_arr[:, (2*rand_test_i[batch]+subvolume_size)//2, (2*rand_test_j[batch]+subvolume_size)//2, (2*rand_test_k[batch]+subvolume_size)//2]
-    testing_time[batch*46:(batch+1)*46]     = norm_time_arr
+    testing_nh[batch*46:(batch+1)*46]       =   nh_arr[:, (2*rand_test_i[batch]+subvolume_size)//2, (2*rand_test_j[batch]+subvolume_size)//2, (2*rand_test_k[batch]+subvolume_size)//2]
+    testing_irates[batch*46:(batch+1)*46]   =   irates_arr[:, (2*rand_test_i[batch]+subvolume_size)//2, (2*rand_test_j[batch]+subvolume_size)//2, (2*rand_test_k[batch]+subvolume_size)//2]
+    testing_time[batch*46:(batch+1)*46]     =   norm_time_arr
 
 
 # plotting
-plot_set = np.zeros((plot_size**2, 3, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
+plot_set = np.zeros((plot_size**2, 4, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
 plot_truth = np.zeros((plot_size**2, 1), dtype=np.float32)
 
 # pick the centre of the cube
 centre = [s//2 for s in xHII_arr.shape][1:]
-time_plot = 32
+time_plot = 32 # what is this?
 
 for j in tqdm(range(centre[1] - plot_size//2, centre[1] + plot_size//2, 1), desc="Iterating px for plot"):
     for k in range(centre[2] - plot_size//2, centre[2] + plot_size//2, 1):
@@ -227,6 +244,7 @@ for j in tqdm(range(centre[1] - plot_size//2, centre[1] + plot_size//2, 1), desc
         plot_set[batch, 0] = nsrc_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / nsrc_max
         plot_set[batch, 1] = rho_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / rho_max
         plot_set[batch, 2] = mask_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / mask_max
+        plot_set[batch, 3] = cluster_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / cluster_max
         plot_truth[batch, 0] = xHII_arr[time_plot, (2*centre[0]+subvolume_size)//2, (2*j+subvolume_size)//2, (2*k+subvolume_size)//2]
 
 plot_time = np.repeat(norm_time_arr[time_plot], plot_size**2)
@@ -251,6 +269,11 @@ plot_time       = torch.from_numpy(plot_time)
 # --------------------------------------------------------------------
 
 def plot_comparative(file, epoch, predicted, truth, r2, show=False):
+
+    """
+    Plots the prediction, truth and residuals of a slice.
+    """
+    
     fig = plt.figure(figsize=(10, 3))
     plt.suptitle(f"Epoch: {epoch}")
     plt.subplot(131)
@@ -267,7 +290,6 @@ def plot_comparative(file, epoch, predicted, truth, r2, show=False):
     pos = plt.imshow(predicted - truth, origin='lower', cmap='bwr', norm=mpl.colors.Normalize(vmin=-1, vmax=1), interpolation='none')
     plt.title("Diff: $R^2$={:.2e}".format(1-r2))
     fig.colorbar(pos)
-    
     
     plt.tight_layout()
     if show:
@@ -384,6 +406,11 @@ def plot_statistics(file, epoch, prediction, truth, show=False):
 
 
 def plot_loss(file, total_loss, data_loss, pinn_loss, validation_loss, learning_rate, show=False):
+
+    """
+    Plots the loss as a function of epoch.
+    """
+
     fig = plt.figure()
     ax = plt.subplot()
     ax.plot(total_loss, label="Total")
@@ -672,6 +699,9 @@ for epoch in tqdm(range(nb_epoch), desc="Iterating epoch", position=0):
             torch.save(model.state_dict(), f"{savepath}C-CNN-V2-model-{UID}.pt")
 
         if (epoch+1) % 10 == 0:
+
+            # output plots every 10 epochs
+            
             plot_input_x = plot_set.to(device)
             plot_input_t  = plot_time.to(device).view(-1, 1)
 
