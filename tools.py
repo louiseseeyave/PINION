@@ -82,7 +82,7 @@ def _get_files(path, datatype, extension='npy'):
 
 
 
-def load(files, memmap, full_cube_size=300, num_of_redshifts=46):
+def load(files, memmap, full_cube_size=250, num_of_redshifts=46):
 
     """
     Loads the data.
@@ -106,7 +106,8 @@ def load(files, memmap, full_cube_size=300, num_of_redshifts=46):
                                  total=num_of_redshifts):
         # load the data.
         if memmap:
-            data[i,:,:,:] = np.load(filename, mmap_mode='r').reshape((300,300,300))
+            data[i,:,:,:] = np.load(filename, mmap_mode='r').reshape((250,250,250))
+            # data[i,:,:,:] = np.load(filename, mmap_mode='r').reshape((300,300,300))
         else:
             data[i,:,:,:] = np.load(filename, mmap_mode=None)
 
@@ -119,7 +120,7 @@ def load(files, memmap, full_cube_size=300, num_of_redshifts=46):
     redshifts = [redshifts[idx] for idx in sort_idx]
     return (redshifts, data[sort_idx,:,:,:])
 
-def index_from_coord(i, j, k, side_size, full_size=300):
+def index_from_coord(i, j, k, side_size, full_size=250):
         """
         For the subdivision of the datacube, returns the index of the subcube for given coordinates
         PARAMETERS
@@ -135,7 +136,7 @@ def index_from_coord(i, j, k, side_size, full_size=300):
         nb_x, nb_y, nb_z = [int(s/side_size) for s in shape] # number of sub cubes per dimensions
         return i*nb_z*nb_y + j*nb_z + k
     
-def coord_from_index(index, side_size, full_size=300):
+def coord_from_index(index, side_size, full_size=250):
     """
     For the subdivision of the datacube, returns the coordinates of the subcube for given index
     The conventional order for subcubes indices is:
