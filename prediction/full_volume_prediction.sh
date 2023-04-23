@@ -25,7 +25,7 @@
 #SBATCH --output logs/slurm-%j.stdout
 #SBATCH --error logs/slurm-%j.stdout
 
-#SBATCH --array=111-1000%100
+#SBATCH --array=0-1000%100
 
 # run the application
 

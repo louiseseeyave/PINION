@@ -2,10 +2,12 @@
 
 # selects the root of the project
 # generate the mask on cosma, not jade
-project_root = "/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/"
+# project_root = "/cosma8/data/dp004/dc-seey1/ml_reion/modules/PINION/"
+project_root = "/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/"
 
 # files location
-filepath = "/cosma8/data/dp004/dc-seey1/ml_reion/data/AI4EoR_dataset/"
+# filepath = "/cosma8/data/dp004/dc-seey1/ml_reion/data/AI4EoR_dataset/"
+filepath = "/jmain02/home/J2AD005/jck12/lxs35-jck12/data/AI4EoR_244Mpc"
 memmap = True # memory mapping might need to be disabled depending on the system
 show = True
 

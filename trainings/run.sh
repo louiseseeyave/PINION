@@ -31,4 +31,7 @@ module purge
 module load python/3.8.6
 
 source ~/venvs/pyenv/bin/activate
+echo "python environment loaded, starting training..."
+# python3 test.py &> logs/slurm-$SLURM_JOB_ID.stdout
 python3 training-PFD-NP.py &> logs/slurm-$SLURM_JOB_ID.stdout
+# python3 generate_propagation_mask.py

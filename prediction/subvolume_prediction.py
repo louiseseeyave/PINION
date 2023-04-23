@@ -1,14 +1,24 @@
 # Pick the Unique ID from the training
-UID = 'TESTNP'
+# UID = 'TESTNP'
 # UID = 'S7X9TJ'
+UID = '244P3D'
+
+
+# training on clustering info or not
+use_cluster = False
+if use_cluster:
+    print('Training with cluster data')
+else:
+    print('Training without cluster data')
+
 
 # Selects the root of the project
 project_root = "/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/"
 
 # Choose the path to the simulation files to load, and the folders to save the model and the subvolumes
-filepath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/data/AI4EoR_dataset/'
+filepath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/data/AI4EoR_244Mpc/'
 # modelpath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_models/'
-modelpath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/models/'
+modelpath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_models/'
 export   = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_subvolumes/'
 
 # Depending on your system, you may want to disable the memory mapping.
@@ -147,7 +157,8 @@ redshifts_str, files_xHII   = tools._get_files(filepath, 'xHII')
 redshifts_str, files_rho   = tools._get_files(filepath, 'overd')
 redshifts_str, files_msrc   = tools._get_files(filepath, 'msrc')
 redshifts_str, files_mask  = tools._get_files(filepath, 'mask')
-redshifts_str, files_cluster  = tools._get_files(filepath, 'cluster') 
+if use_cluster:
+    redshifts_str, files_cluster  = tools._get_files(filepath, 'cluster') 
 
 # load overdensity data
 redshifts_arr, overdensity_arr = tools.load(files_rho, memmap) # unitless
@@ -173,10 +184,11 @@ mask_max                       = np.max(mask_arr)
 mask_arr                       = tools.PBC(mask_arr, ts, xs, ys, zs)
 
 # load clustering
-redshifts_arr, mask_arr        = tools.load(files_cluster, memmap) # unitless
-cluster_arr                   *= (u.m/u.m)
-cluster_max                    = np.max(cluster_arr)
-cluster_arr                    = tools.PBC(cluster_arr, ts, xs, ys, zs)
+if use_cluster:
+    redshifts_arr, mask_arr        = tools.load(files_cluster, memmap) # unitless
+    cluster_arr                   *= (u.m/u.m)
+    cluster_max                    = np.max(cluster_arr)
+    cluster_arr                    = tools.PBC(cluster_arr, ts, xs, ys, zs)
 
 redshifts_arr *= (u.m/u.m)
 
@@ -189,7 +201,10 @@ norm_time_arr = time_arr / time_max
 
 # produce the data to export
 # training
-training_set = np.zeros((46*cube_size**3, 4, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
+if use_cluster:
+    training_set = np.zeros((46*cube_size**3, 4, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
+else:
+    training_set = np.zeros((46*cube_size**3, 3, subvolume_size, subvolume_size, subvolume_size), dtype=np.float32)
 training_time = np.zeros((46*cube_size**3), dtype=np.float32)
 
 # get the coordinates of the points that will be predicted
@@ -201,7 +216,8 @@ for i in tqdm(range(indices.shape[1]), desc="Creating training batches"):
     training_set[i*46:(i+1)*46, 0] =   msrc_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / msrc_max
     training_set[i*46:(i+1)*46, 1] =   rho_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / rho_max
     training_set[i*46:(i+1)*46, 2] =   mask_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / mask_max
-    training_set[i*46:(i+1)*46, 3] =   cluster_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / cluster_max
+    if use_cluster:
+        training_set[i*46:(i+1)*46, 3] =   cluster_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / cluster_max
     training_time[i*46:(i+1)*46]   = norm_time_arr
 
 # tell autograd not to record operations on this tensor
