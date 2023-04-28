@@ -26,6 +26,6 @@ def compare_training_loss(UIDs):
     fig.savefig('plots/compare_training_loss', bbox_inches='tight',  dpi=300)
 
 
-UIDs = ['244P3D', '244C50', '244C20']
+UIDs = ['244P3D', '244C50', '244C20', '244C10']
 
 compare_training_loss(UIDs)
