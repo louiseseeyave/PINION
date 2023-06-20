@@ -1,5 +1,5 @@
 # Selects Unique ID from training + additionnal information added to file name 
-UID = 'S7X9TJ'
+UID = 'MASKxx'
 ADD = ''
 
 # Selects the root of the project
@@ -46,7 +46,7 @@ full_cube = np.zeros((ltime, full_cube_size, full_cube_size, full_cube_size))
 for idx in tqdm(range((full_cube_size//cube_size)**3), desc="Joining batches"):
     i, j, k = tools.coord_from_index(idx, cube_size, full_cube_size)
 
-    cube = np.load(f"{subcube_path}xHII{ADD}_{UID}_cubesize{cube_size}_idx{idx}.npz")
+    cube = np.load(f"{subcube_path}xHII{ADD}_{UID}_cubesize{cube_size}_idx{idx}.npy")
     full_cube[:, cube_size*i:cube_size*(i+1), cube_size*j:cube_size*(j+1), cube_size*k:cube_size*(k+1)] = cube
 
 # manually select the redshifts

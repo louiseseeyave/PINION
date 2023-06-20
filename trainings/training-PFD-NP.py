@@ -7,9 +7,13 @@
 # For this, set the boolean "enable_pinn" to False.
 
 # training on clustering info or not
-use_cluster = False
+use_cluster = True
+cluster_knn = 'cellcluster75'
+UID = 'CEL075'
+# cluster_knn = 'cluster100'
+# UID = '244100'
 if use_cluster:
-    print('Training with cluster data')
+    print('Training with cluster data:', cluster_knn)
 else:
     print('Training without cluster data')
 
@@ -48,6 +52,7 @@ class Config:
     score: str = 'mse' # other choice: r2
     maxpool_size: int = 2
     maxpool_stride: int = 2
+    n_input_channel: int = 3
     
 
     def __str__(self):
@@ -69,13 +74,21 @@ n_features: {self.n_features}
 score: {self.score}
 maxpool_size: {self.maxpool_size}
 maxpool_stride: {self.maxpool_stride}
+n_input_channel: {self.n_input_channel}
 --------------------------------
 """
 
 # Choice of configuration
-myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
-                  score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
-                  batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=False)
+if use_cluster:
+    myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
+                      score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
+                      batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5,
+                      show=False, n_input_channel=4)
+else:
+    myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
+                      score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
+                      batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=False,
+                      n_input_channel=3)
 
 kernel_size = myconfig.kernel_size
 n_pool = myconfig.n_pool
@@ -93,6 +106,7 @@ n_features = myconfig.n_features
 score_type = myconfig.score
 maxpool_size = myconfig.maxpool_size
 maxpool_stride = myconfig.maxpool_stride
+n_input_channel = myconfig.n_input_channel
 
 # --------------------------------------------------------------------
 
@@ -132,7 +146,7 @@ redshifts_str, files_rho   = tools._get_files(filepath, 'overd')
 redshifts_str, files_nsrc   = tools._get_files(filepath, 'msrc')
 redshifts_str, files_mask  = tools._get_files(filepath, 'mask')
 if use_cluster:
-    redshifts_str, files_cluster  = tools._get_files(filepath, 'cluster') 
+    redshifts_str, files_cluster  = tools._get_files(filepath, cluster_knn)
 
 # load the data
 redshifts_arr, irates_arr      = tools.load(files_irate, memmap) # 1/s
@@ -479,13 +493,15 @@ reload(r2s)
 
 
 # 1) Define the models
-model = cnn.CentralCNNV2(3, 1, n_pool, n_features, kernel_size, subvolume_size, n_fcn_layers, fcn_div_factor, maxpool_size, maxpool_stride).to(device)
+model = cnn.CentralCNNV2(n_input_channel, 1, n_pool, n_features,
+                         kernel_size, subvolume_size, n_fcn_layers,
+                         fcn_div_factor, maxpool_size,
+                         maxpool_stride).to(device)
 # UID = generate_random_string(6) # id to save stuff and avoid overriding plots.
-UID = '244P3D'
 print(f"Unique ID for this run: {UID}")
 
 from torchinfo import summary
-print(summary(model, [(920, 3, subvolume_size, subvolume_size, subvolume_size), (920, 1)]))
+print(summary(model, [(920, n_input_channel, subvolume_size, subvolume_size, subvolume_size), (920, 1)]))
 print(model)
 
 # --------------------------------------------------------------------

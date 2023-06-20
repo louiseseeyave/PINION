@@ -4,7 +4,8 @@
 #SBATCH --nodes=1
 
 # set max wallclock time
-#SBATCH --time=6:00:00
+#SBATCH --time=36:00:00
+# #SBATCH --time=02:59:00
 
 # set name of job
 #SBATCH --job-name=Train-AI4Reion
@@ -20,6 +21,7 @@
 
 # choose which partition to use
 #SBATCH --partition=small
+# #SBATCH --partition=devel
 
 # store logs
 #SBATCH --output logs/slurm-%j.out
@@ -33,5 +35,7 @@ module load python/3.8.6
 source ~/venvs/pyenv/bin/activate
 echo "python environment loaded, starting training..."
 # python3 test.py &> logs/slurm-$SLURM_JOB_ID.stdout
-python3 training-PFD-NP.py &> logs/slurm-$SLURM_JOB_ID.stdout
+# python3 training-PFD-NP.py &> logs/slurm-$SLURM_JOB_ID.stdout
+python3 train.py &> logs/slurm-$SLURM_JOB_ID.stdout
+# python3 compare.py &> logs/slurm-$SLURM_JOB_ID.stdout
 # python3 generate_propagation_mask.py

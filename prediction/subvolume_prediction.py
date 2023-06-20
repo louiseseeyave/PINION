@@ -1,13 +1,18 @@
+# DEPRECATED - PLEASE USE subvolume_predict.py!!
+
 # Pick the Unique ID from the training
 # UID = 'TESTNP'
 # UID = 'S7X9TJ'
-UID = '244P3D'
-
+# UID = '244C20'
+# UID = 'HCL150'
+UID = 'CEL075'
+print('UID:', UID)
 
 # training on clustering info or not
-use_cluster = False
+use_cluster = True
+cluster_knn = 'cellcluster75'
 if use_cluster:
-    print('Training with cluster data')
+    print('Training with cluster data:', cluster_knn)
 else:
     print('Training without cluster data')
 
@@ -49,6 +54,7 @@ class Config:
     score: str = 'mse' # other choice: r2
     maxpool_size: int = 2
     maxpool_stride: int = 2
+    n_input_channel: int = 3
     
 
     def __str__(self):
@@ -70,14 +76,22 @@ class Config:
                 score: {self.score}
                 maxpool_size: {self.maxpool_size}
                 maxpool_stride: {self.maxpool_stride}
+                n_input_channel: {self.n_input_channel}
                 --------------------------------
                 """
 
 
 # Choose the relevant configuration
-myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
-                  score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
-                  batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=False)
+if use_cluster:
+    myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
+                      score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
+                      batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5,
+                      show=False, n_input_channel=4)
+else:
+    myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
+                      score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
+                      batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5, show=False,
+                      n_input_channel=3)
 
 kernel_size = myconfig.kernel_size
 n_pool = myconfig.n_pool
@@ -95,6 +109,7 @@ n_features = myconfig.n_features
 score_type = myconfig.score
 maxpool_size = myconfig.maxpool_size
 maxpool_stride = myconfig.maxpool_stride
+n_input_channel = myconfig.n_input_channel
 
 
 import os
@@ -130,12 +145,11 @@ if len(sys.argv) > 3:
 elif len(sys.argv) == 3:
     cube_size = int(sys.argv[1]) # size of the cube
     exec_idx = int(sys.argv[2]) # TASK_ID i.e. execution number
-    assert 300%cube_size == 0, f"300 isn't a multiple of {cube_size}: 300%{cube_size}={300%cube_size}"
-    assert exec_idx < (300//cube_size)**3
+    assert 250%cube_size == 0, f"250 isn't a multiple of {cube_size}: 250%{cube_size}={250%cube_size}"
+    assert exec_idx < (250//cube_size)**3
 else:
     print("Program is missing arguments. Expected input:\npython pipeline_full.py {subcube_size} {execution_number}")
     sys.exit()
-
 
 # Compute the subvolume
 i,j,k = tools.coord_from_index(exec_idx, cube_size)
@@ -158,7 +172,7 @@ redshifts_str, files_rho   = tools._get_files(filepath, 'overd')
 redshifts_str, files_msrc   = tools._get_files(filepath, 'msrc')
 redshifts_str, files_mask  = tools._get_files(filepath, 'mask')
 if use_cluster:
-    redshifts_str, files_cluster  = tools._get_files(filepath, 'cluster') 
+    redshifts_str, files_cluster  = tools._get_files(filepath, cluster_knn) 
 
 # load overdensity data
 redshifts_arr, overdensity_arr = tools.load(files_rho, memmap) # unitless
@@ -185,7 +199,7 @@ mask_arr                       = tools.PBC(mask_arr, ts, xs, ys, zs)
 
 # load clustering
 if use_cluster:
-    redshifts_arr, mask_arr        = tools.load(files_cluster, memmap) # unitless
+    redshifts_arr, cluster_arr     = tools.load(files_cluster, memmap) # unitless
     cluster_arr                   *= (u.m/u.m)
     cluster_max                    = np.max(cluster_arr)
     cluster_arr                    = tools.PBC(cluster_arr, ts, xs, ys, zs)
@@ -226,8 +240,11 @@ training_set  = torch.from_numpy(training_set).requires_grad_(False)
 training_time = torch.from_numpy(training_time).requires_grad_(False)
 
 # load the model
-model = cnn.CentralCNNV2(3, 1, n_pool, n_features, kernel_size, subvolume_size,
-                         n_fcn_layers, fcn_div_factor, maxpool_size, maxpool_stride).to(device)
+model = cnn.CentralCNNV2(n_input_channel, 1, n_pool, n_features,
+                         kernel_size, subvolume_size, n_fcn_layers,
+                         fcn_div_factor, maxpool_size,
+                         maxpool_stride).to(device)
+
 model.eval()
 model.load_state_dict(torch.load(f"{modelpath}C-CNN-V2-model-{UID}.pt", map_location=device))
 
