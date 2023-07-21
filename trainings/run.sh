@@ -24,8 +24,8 @@
 # #SBATCH --partition=devel
 
 # store logs
-#SBATCH --output logs/slurm-%j.out
-#SBATCH --error logs/slurm-%j.err
+#SBATCH --output logs/train-slurm-%j.out
+#SBATCH --error logs/train-slurm-%j.err
 
 # run the application
 
@@ -36,6 +36,6 @@ source ~/venvs/pyenv/bin/activate
 echo "python environment loaded, starting training..."
 # python3 test.py &> logs/slurm-$SLURM_JOB_ID.stdout
 # python3 training-PFD-NP.py &> logs/slurm-$SLURM_JOB_ID.stdout
-python3 train.py &> logs/slurm-$SLURM_JOB_ID.stdout
+python3 train.py &> logs/train-slurm-$SLURM_JOB_ID.stdout
 # python3 compare.py &> logs/slurm-$SLURM_JOB_ID.stdout
 # python3 generate_propagation_mask.py

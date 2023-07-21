@@ -4,14 +4,14 @@
 ### Linux ###
 *~
 
-# predicted volumes
+# files I don't want to sync
 louise_fullvolume/
 louise_subvolumes/
-
-# logs
 prediction/logs
 plotting_scripts/logs
-training/logs
+trainings/logs
+loss/
+louise_models/
 
 # temporary files which can be created if a process still has a handle open of a deleted file
 .fuse_hidden*

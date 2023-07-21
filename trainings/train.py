@@ -8,13 +8,18 @@
 enable_pinn = True
 
 # Specify the data to be used in the training
-# training_fnames = ['overd', 'msrc', 'cellcluster100']
+training_fnames = ['overd', 'msrc', 'mask', 'cellcluster25']
 # training_fnames = ['cellcluster100']
 n_input = len(training_fnames)
 print(f'Training with data: {training_fnames} ({n_input} inputs)')
 
+# Specify subvolume size
+sv_size = 39
+
 # Set unique ID of run
-UID = 'CE100x'
+# UID = 'CEL100-SV11'
+UID = 'FID3-CELLC25-8GPU-SV39'
+# UID = 'CELL100-ONLY'
 print('UID of this model:', UID)
 
 # Select the root of the project
@@ -25,6 +30,10 @@ project_root = "/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/"
 filepath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/data/AI4EoR_244Mpc/'
 savepath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_models/'
 memmap = True
+
+import torch
+n_gpus = torch.cuda.device_count()
+print(f'Running with {n_gpus} GPUs!')
 
 # --------------------------------------------------------------------
 
@@ -79,7 +88,7 @@ n_input_channel: {self.n_input_channel}
 """
 
 # Choice of configuration
-myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
+myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=sv_size, n_features=64,
                   score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
                   batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5,
                   show=False, n_input_channel=n_input)
@@ -145,8 +154,14 @@ if 'msrc' in training_fnames:
     redshifts_str, files_msrc = tools._get_files(filepath, 'msrc')
 if 'mask' in training_fnames:
     redshifts_str, files_mask = tools._get_files(filepath, 'mask')
+if 'cellcluster25' in training_fnames:
+    redshifts_str, files_cluster25 = tools._get_files(filepath, 'cellcluster25')
+if 'cellcluster50' in training_fnames:
+    redshifts_str, files_cluster50 = tools._get_files(filepath, 'cellcluster50')
+if 'cellcluster75' in training_fnames:
+    redshifts_str, files_cluster75 = tools._get_files(filepath, 'cellcluster75')
 if 'cellcluster100' in training_fnames:
-    redshifts_str, files_cluster = tools._get_files(filepath, 'cellcluster100')
+    redshifts_str, files_cluster100 = tools._get_files(filepath, 'cellcluster100')
 
 # Load the data
 redshifts_arr, irates_arr = tools.load(files_irate, memmap) # 1/s
@@ -155,23 +170,34 @@ redshifts_arr, xHII_arr = tools.load(files_xHII, memmap) # unitless
 redshifts_arr, overdensity_arr = tools.load(files_rho, memmap) # unitless
 if 'msrc' in training_fnames:
     redshifts_arr, msrc_arr = tools.load(files_msrc, memmap) # unitless
+    msrc_arr *= (u.m/u.m)
+    msrc_max = np.max(msrc_arr)
 if 'mask' in training_fnames:
     redshifts_arr, mask_arr = tools.load(files_mask, memmap) # unitless
+    mask_arr *= (u.m/u.m)
+    mask_max = np.max(mask_arr)
+if 'cellcluster25' in training_fnames:
+    redshifts_arr, cluster25_arr = tools.load(files_cluster25, memmap) # unitless
+    cluster25_arr *= (u.m/u.m)
+    cluster25_max = np.max(cluster25_arr)
+if 'cellcluster50' in training_fnames:
+    redshifts_arr, cluster50_arr = tools.load(files_cluster50, memmap) # unitless
+    cluster50_arr *= (u.m/u.m)
+    cluster50_max = np.max(cluster50_arr)
+if 'cellcluster75' in training_fnames:
+    redshifts_arr, cluster75_arr = tools.load(files_cluster75, memmap) # unitless
+    cluster75_arr *= (u.m/u.m)
+    cluster75_max = np.max(cluster75_arr)
 if 'cellcluster100' in training_fnames:
-    redshifts_arr, cluster_arr = tools.load(files_cluster, memmap) # unitless
+    redshifts_arr, cluster100_arr = tools.load(files_cluster100, memmap) # unitless
+    cluster100_arr *= (u.m/u.m)
+    cluster100_max = np.max(cluster100_arr)
 
 # Apply units
 irates_arr /= u.s
 xHII_arr *= (u.m/u.m)
 redshifts_arr *= (u.m/u.m)
-# if 'overd' in training_fnames:
 overdensity_arr *= (u.m/u.m)
-if 'msrc' in training_fnames:
-    msrc_arr *= (u.m/u.m)
-if 'mask' in training_fnames:
-    mask_arr *= (u.m/u.m)
-if 'cellcluster100' in training_fnames:
-    cluster_arr *= (u.m/u.m)
 
 # Now we can convert all the data into their correct form.
 Om0 = cosmo.Om0
@@ -190,6 +216,7 @@ nh_arr = nh_bar * (1 + overdensity_arr)
 if 'overd' in training_fnames:
     rho_arr = rhoc0 * (1 + overdensity_arr)
     del overdensity_arr
+    rho_max = np.max(rho_arr)
 
 # Load the cosmology and convert redshift to time
 time_arr = np.asarray([cosmo.age(z).to(u.s).value for z in redshifts_arr], dtype=np.float32) * u.s
@@ -198,14 +225,6 @@ norm_time_arr = time_arr / time_max
 
 # Get max values of each array - needed to normalise training data
 irates_max = irates_arr.max()
-if 'msrc' in training_fnames:
-    msrc_max = np.max(msrc_arr)
-if 'overd' in training_fnames:
-    rho_max = np.max(rho_arr)
-if 'mask' in training_fnames:
-    mask_max = np.max(mask_arr)
-if 'cellcluster100' in training_fnames:
-    cluster_max = np.max(cluster_arr)
 
 # --------------------------------------------------------------------
 
@@ -229,8 +248,17 @@ for batch in tqdm(range(nb_train), desc="Creating training batches"):
     # Populate training_set array with the training data
     # (Populated alphabetically, according to the training data name)
     train_int = 0
+    if 'cellcluster25' in training_fnames:
+        training_set[batch*46:(batch+1)*46, train_int] = cluster25_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / cluster25_max
+        train_int += 1
+    if 'cellcluster50' in training_fnames:
+        training_set[batch*46:(batch+1)*46, train_int] = cluster50_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / cluster50_max
+        train_int += 1
+    if 'cellcluster75' in training_fnames:
+        training_set[batch*46:(batch+1)*46, train_int] = cluster75_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / cluster75_max
+        train_int += 1
     if 'cellcluster100' in training_fnames:
-        training_set[batch*46:(batch+1)*46, train_int] = cluster_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / cluster_max
+        training_set[batch*46:(batch+1)*46, train_int] = cluster100_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / cluster100_max
         train_int += 1
     if 'mask' in training_fnames:
         training_set[batch*46:(batch+1)*46, train_int] = mask_arr[:, rand_train_i[batch]:rand_train_i[batch]+subvolume_size, rand_train_j[batch]:rand_train_j[batch]+subvolume_size, rand_train_k[batch]:rand_train_k[batch]+subvolume_size] / mask_max
@@ -260,8 +288,17 @@ for batch in tqdm(range(nb_test), desc="Creating testing batches"):
 
     # Populate testing_set array with the test data
     test_int = 0
+    if 'cellcluster25' in training_fnames:
+        testing_set[batch*46:(batch+1)*46, test_int] = cluster25_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / cluster25_max
+        test_int += 1
+    if 'cellcluster50' in training_fnames:
+        testing_set[batch*46:(batch+1)*46, test_int] = cluster50_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / cluster50_max
+        test_int += 1
+    if 'cellcluster75' in training_fnames:
+        testing_set[batch*46:(batch+1)*46, test_int] = cluster75_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / cluster75_max
+        test_int += 1
     if 'cellcluster100' in training_fnames:
-        testing_set[batch*46:(batch+1)*46, test_int] = cluster_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / cluster_max
+        testing_set[batch*46:(batch+1)*46, test_int] = cluster100_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / cluster100_max
         test_int += 1
     if 'mask' in training_fnames:
         testing_set[batch*46:(batch+1)*46, test_int] = mask_arr[:, rand_test_i[batch]:rand_test_i[batch]+subvolume_size, rand_test_j[batch]:rand_test_j[batch]+subvolume_size, rand_test_k[batch]:rand_test_k[batch]+subvolume_size] / mask_max
@@ -291,8 +328,17 @@ for j in tqdm(range(centre[1] - plot_size//2, centre[1] + plot_size//2, 1), desc
     for k in range(centre[2] - plot_size//2, centre[2] + plot_size//2, 1):
         batch = (j-centre[1]+plot_size//2)*plot_size + k-centre[2]+plot_size//2
         plot_int = 0
+        if 'cellcluster25' in training_fnames:
+            plot_set[batch, plot_int] = cluster25_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / cluster25_max
+            plot_int += 1
+        if 'cellcluster50' in training_fnames:
+            plot_set[batch, plot_int] = cluster50_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / cluster50_max
+            plot_int += 1
+        if 'cellcluster75' in training_fnames:
+            plot_set[batch, plot_int] = cluster75_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / cluster75_max
+            plot_int += 1
         if 'cellcluster100' in training_fnames:
-            plot_set[batch, plot_int] = cluster_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / cluster_max
+            plot_set[batch, plot_int] = cluster100_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / cluster100_max
             plot_int += 1
         if 'mask' in training_fnames:
             plot_set[batch, plot_int] = mask_arr[time_plot, centre[0]:centre[0]+subvolume_size, j:j+subvolume_size, k:k+subvolume_size] / mask_max
@@ -517,7 +563,11 @@ model = cnn.CentralCNNV2(n_input_channel, 1, n_pool, n_features,
                          kernel_size, subvolume_size, n_fcn_layers,
                          fcn_div_factor, maxpool_size,
                          maxpool_stride).to(device)
+if n_gpus>1:
+    model = nn.DataParallel(model)
+model.to(device)
 print(f"Unique ID for this run: {UID}")
+print(f"Using {torch.cuda.device_count()} GPUs!")
 
 from torchinfo import summary
 print(summary(model, [(920, n_input_channel, subvolume_size, subvolume_size, subvolume_size), (920, 1)]))

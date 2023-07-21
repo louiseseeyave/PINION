@@ -1,5 +1,5 @@
 # Selects Unique ID from training + additionnal information added to file name 
-UID = 'MASKxx'
+UID = 'FID3-CELLC25-8GPU'
 ADD = ''
 
 # Selects the root of the project

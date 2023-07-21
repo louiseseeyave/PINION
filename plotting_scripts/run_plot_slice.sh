@@ -19,8 +19,8 @@
 #SBATCH --partition=devel
 
 # store logs
-#SBATCH --output logs/slurm-%j.out
-#SBATCH --error logs/slurm-%j.err
+#SBATCH --output logs/slurm-slice-%j.out
+#SBATCH --error logs/slurm-slice-%j.err
 
 # run the application
 

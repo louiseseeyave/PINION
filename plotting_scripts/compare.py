@@ -31,7 +31,7 @@ def compare_training_loss(UIDs, string='', cmap=None):
     plt.ylabel("Losses")
     
     
-    fig.savefig(f'plots/compare_training_loss{string}', bbox_inches='tight',  dpi=300)
+    fig.savefig(f'../plots/compare_training_loss/compare_training_loss{string}', bbox_inches='tight',  dpi=300)
 
     
 def compare_statistics(UIDs, z, string='', cmap=None):
@@ -164,7 +164,7 @@ def compare_statistics(UIDs, z, string='', cmap=None):
     plt.legend()
 
     plt.tight_layout()
-    fsave = f'plots/compare_statistics_{z}{string}.png'
+    fsave = f'../plots/compare_statistics/compare_statistics_{z}{string}.png'
     fig.savefig(fsave, bbox_inches='tight', pad_inches=0.1, dpi=300,
                 facecolor="white")
     plt.close()
@@ -172,12 +172,15 @@ def compare_statistics(UIDs, z, string='', cmap=None):
 
 # ====================================================================
     
-string = '_160623'
+string = '_210723'
 
-UIDs = ['244FID', 'CEL100', 'C100NM', 'MASKxx', 'CE100x']
+# UIDs = ['244FID', 'CEL100', 'C100NM', 'MASKxx', 'CE100x']
+# UIDs = ['244FID','FID3', 'MASKxx', 'MASK-ONLY-8GPU']
+UIDs = ['FID3','FID3-CELLC100','FID3-CELLC25-8GPU']
+
 compare_training_loss(UIDs, string)
 
-# UIDs = ['244FID','HCL150', 'CEL025', 'CEL050', 'CEL075', 'CEL100']
+# UIDs = ['244FID','FID3','FID3-CELLC100']
 zs = ['6.830', '7.059', '7.480']
 for z in zs:
     compare_statistics(UIDs, z, string)

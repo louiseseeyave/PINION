@@ -4,8 +4,8 @@
 #SBATCH --nodes=1
 
 # set max wallclock time
-# #SBATCH --time=02:00:00
-#SBATCH --time=08:00:00
+# #SBATCH --time=00:45:00
+#SBATCH --time=36:00:00
 
 # set name of job
 #SBATCH --job-name=Pred-AI4Reion
@@ -35,9 +35,11 @@
 echo STARTING AT `date`
 echo "Setting up enviroment to use MPI..."
 
-# Set how you want to split the cube.
-CUBESIZE=50 # number of cells along an axis
-NDOMAINS=125 # basically (250/50)^3
+# Set how you want to split the cube.
+# CUBESIZE=50 # number of cells along an axis
+# NDOMAINS=125 # basically (250/50)^3
+CUBESIZE=25 # number of cells along an axis
+NDOMAINS=1000 # basically (250/50)^3
 
 # Here we load the different (you will have to change this, this is CSCS specific)
 # module load daint-gpu
@@ -56,12 +58,12 @@ source ~/venvs/pyenv/bin/activate
 # export PYTHONPATH="/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/"
 
 # echo "Defining task number..."
-# Define the task number
+# Define the task number
 # TASK_ID=$(( ${SLURM_ARRAY_TASK_ID} - 1 ))
 # echo "Task ${TASK_ID}/${NDOMAINS}"
 
-# NBATCH=({0..50..1})
-NBATCH=({0..7..1})
+NBATCH=({0..50..1})
+# NBATCH=({0..7..1})
 # NBATCH=({49..50..1})
 echo ${NBATCH[@]}
 
@@ -71,12 +73,21 @@ echo "Executing script..."
 
 for ii in ${NBATCH[@]}
   do
-    BATCH=$((${SLURM_ARRAY_TASK_ID} * 7))
+    # BATCH=$((${SLURM_ARRAY_TASK_ID} * 7))
+    # TASK_ID=$((${BATCH} + ${ii} - 1))
+    # echo "Task ID: ${TASK_ID}"
+    BATCH=$((${SLURM_ARRAY_TASK_ID} * 50))  
     TASK_ID=$((${BATCH} + ${ii} - 1))
+    # TASK_ID=${SLURM_ARRAY_TASK_ID}
     echo "Task ID: ${TASK_ID}"
     # python3 subvolume_prediction.py $CUBESIZE $TASK_ID
     python3 subvolume_predict.py $CUBESIZE $TASK_ID
 done
+
+# TASK_ID=${SLURM_ARRAY_TASK_ID}
+# echo "Task ID: ${TASK_ID}"
+# python3 subvolume_prediction.py $CUBESIZE $TASK_ID
+# python3 subvolume_predict.py $CUBESIZE $TASK_ID
     
 echo FINISHED AT `date`
 

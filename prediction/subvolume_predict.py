@@ -1,12 +1,11 @@
 # Physics-informed neural network prediction
 
 # Pick the Unique ID from the training
-UID = 'CE100x'
+UID = 'FID3-CELLC25-8GPU'
 print('UID of training model:', UID)
 
 # Specify the data to be used in the prediction
-# training_fnames = ['overd', 'msrc', 'cellcluster100']
-training_fnames = ['cellcluster100']
+training_fnames = ['overd', 'msrc', 'mask', 'cellcluster25']
 n_input = len(training_fnames)
 print(f'Training with data: {training_fnames} ({n_input} inputs)')
 # Select the root of the project
@@ -21,6 +20,10 @@ export   = '/jmain02/home/J2AD005/jck12/lxs35-jck12/modules/PINION/louise_subvol
 
 # Depending on your system, you may want to disable the memory mapping
 memmap = True
+
+import torch
+n_gpus = torch.cuda.device_count()
+print(f'Running with {n_gpus} GPUs!')
 
 # --------------------------------------------------------------------
 
@@ -78,7 +81,7 @@ class Config:
                 """
 
 # Choice of configuration
-myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=7, n_features=64,
+myconfig = Config(kernel_size=3, n_pool=3, subvolume_size=11, n_features=64,
                   score='r2', maxpool_stride=1, nb_train=4000, nb_test=500,
                   batch_size=4600//5*4, fcn_div_factor=4, n_fcn_layers=5,
                   show=False, n_input_channel=n_input)
@@ -173,8 +176,14 @@ if 'msrc' in training_fnames:
     redshifts_str, files_msrc = tools._get_files(filepath, 'msrc')
 if 'mask' in training_fnames:
     redshifts_str, files_mask = tools._get_files(filepath, 'mask')
+if 'cellcluster25' in training_fnames:
+    redshifts_str, files_cluster25 = tools._get_files(filepath, 'cellcluster25')
+if 'cellcluster50' in training_fnames:
+    redshifts_str, files_cluster50 = tools._get_files(filepath, 'cellcluster50')
+if 'cellcluster75' in training_fnames:
+    redshifts_str, files_cluster75 = tools._get_files(filepath, 'cellcluster75')
 if 'cellcluster100' in training_fnames:
-    redshifts_str, files_cluster = tools._get_files(filepath, 'cellcluster100')
+    redshifts_str, files_cluster100 = tools._get_files(filepath, 'cellcluster100')
 
 # Load the data
 redshifts_arr, irates_arr = tools.load(files_irate, memmap) # 1/s
@@ -201,11 +210,29 @@ if 'mask' in training_fnames:
     mask_max = np.max(mask_arr)
     mask_arr = tools.PBC(mask_arr, ts, xs, ys, zs)
 
+if 'cellcluster25' in training_fnames:
+    redshifts_arr, cluster25_arr = tools.load(files_cluster25, memmap) # unitless
+    cluster25_arr *= (u.m/u.m)
+    cluster25_max = np.max(cluster25_arr)
+    cluster25_arr = tools.PBC(cluster25_arr, ts, xs, ys, zs)
+
+if 'cellcluster50' in training_fnames:
+    redshifts_arr, cluster50_arr = tools.load(files_cluster50, memmap) # unitless
+    cluster50_arr *= (u.m/u.m)
+    cluster50_max = np.max(cluster50_arr)
+    cluster50_arr = tools.PBC(cluster50_arr, ts, xs, ys, zs)
+
+if 'cellcluster75' in training_fnames:
+    redshifts_arr, cluster75_arr = tools.load(files_cluster75, memmap) # unitless
+    cluster75_arr *= (u.m/u.m)
+    cluster75_max = np.max(cluster75_arr)
+    cluster75_arr = tools.PBC(cluster75_arr, ts, xs, ys, zs)
+    
 if 'cellcluster100' in training_fnames:
-    redshifts_arr, cluster_arr = tools.load(files_cluster, memmap) # unitless
-    cluster_arr *= (u.m/u.m)
-    cluster_max = np.max(cluster_arr)
-    cluster_arr = tools.PBC(cluster_arr, ts, xs, ys, zs)
+    redshifts_arr, cluster100_arr = tools.load(files_cluster100, memmap) # unitless
+    cluster100_arr *= (u.m/u.m)
+    cluster100_max = np.max(cluster100_arr)
+    cluster100_arr = tools.PBC(cluster100_arr, ts, xs, ys, zs)
     
 redshifts_arr *= (u.m/u.m)
 
@@ -230,8 +257,17 @@ for i in tqdm(range(indices.shape[1]), desc="Creating training batches"):
     # Populate training_set array with the training data
     # (Populated alphabetically, according to the training data name)
     train_int = 0
+    if 'cellcluster25' in training_fnames:
+        training_set[i*46:(i+1)*46, train_int] = cluster25_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / cluster25_max
+        train_int += 1
+    if 'cellcluster50' in training_fnames:
+        training_set[i*46:(i+1)*46, train_int] = cluster50_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / cluster50_max
+        train_int += 1
+    if 'cellcluster75' in training_fnames:
+        training_set[i*46:(i+1)*46, train_int] = cluster75_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / cluster75_max
+        train_int += 1
     if 'cellcluster100' in training_fnames:
-        training_set[i*46:(i+1)*46, train_int] = cluster_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / cluster_max
+        training_set[i*46:(i+1)*46, train_int] = cluster100_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / cluster100_max
         train_int += 1
     if 'mask' in training_fnames:
         training_set[i*46:(i+1)*46, train_int] = mask_arr[:, indices[0, i]:indices[0, i]+subvolume_size, indices[1, i]:indices[1, i]+subvolume_size, indices[2, i]:indices[2, i]+subvolume_size] / mask_max
@@ -244,9 +280,18 @@ for i in tqdm(range(indices.shape[1]), desc="Creating training batches"):
         train_int += 1
     training_time[i*46:(i+1)*46] = norm_time_arr
 
+    
 # Tell autograd not to record operations on this tensor
 training_set  = torch.from_numpy(training_set).requires_grad_(False)
 training_time = torch.from_numpy(training_time).requires_grad_(False)
+
+# delete arrays that aren't necessary anymore
+if 'overd' in training_fnames:
+    del rho_arr
+if 'msrc' in training_fnames:
+    del msrc_arr
+if 'mask' in training_fnames:
+    del mask_arr
 
 # --------------------------------------------------------------------
 
@@ -254,8 +299,10 @@ training_time = torch.from_numpy(training_time).requires_grad_(False)
 model = cnn.CentralCNNV2(n_input_channel, 1, n_pool, n_features,
                          kernel_size, subvolume_size, n_fcn_layers,
                          fcn_div_factor, maxpool_size,
-                         maxpool_stride).to(device)
-
+                         maxpool_stride)
+if n_gpus>1:
+    model = nn.DataParallel(model)
+model.to(device)
 model.eval()
 model.load_state_dict(torch.load(f"{modelpath}C-CNN-V2-model-{UID}.pt", map_location=device))
 
@@ -264,6 +311,10 @@ length = training_set.shape[0]//46
 
 prediction = np.zeros((46*cube_size**3), dtype=np.float32)
 prediction = torch.from_numpy(prediction).requires_grad_(False)
+
+# check memory status
+# print('check memory 3:')
+# print(torch.cuda.memory_summary(device=None, abbreviated=False))
 
 with torch.no_grad():
     for batch in tqdm(range(46), desc="iterating timings"):

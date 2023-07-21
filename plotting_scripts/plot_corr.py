@@ -23,59 +23,41 @@ from scipy import stats
 
 filepath = '/jmain02/home/J2AD005/jck12/lxs35-jck12/data/AI4EoR_244Mpc'
 
-def plot_corr(z, filename, filepath=filepath):
+def plot_corr(z, xdata, ydata, filepath=filepath):
     
-    fname = f'{filepath}/irate_z{z}.npy'
-    irate = np.load(fname)
-    irate = irate.flatten()
+    fname = f'{filepath}/{xdata}_z{z}.npy'
+    xx = np.load(fname)
+    xx = xx.flatten()
 
-    fname = f'{filepath}/mask_z{z}.npy'
-    mask = np.load(fname)
-    mask = mask.flatten()
-
-    fname = f'{filepath}/{filename}_z{z}.npy'
-    data = np.load(fname)
-    data = data.flatten()
+    fname = f'{filepath}/{ydata}_z{z}.npy'
+    yy = np.load(fname)
+    yy = yy.flatten()
 
     norm = matplotlib.colors.LogNorm()
 
     fig, ax = plt.subplots()
-    plot = ax.hexbin(data, mask, mincnt=1, linewidth=0., norm=norm)
+    plt.title(f'z={z}')
+    plot = ax.hexbin(xx, yy, mincnt=1, linewidth=0., norm=norm)
     cb = fig.colorbar(plot)
-    corr = stats.pearsonr(data, mask)[0]
+    corr = stats.pearsonr(xx, yy)[0]
     ax.text(0.1, 0.9, f'corr: {corr:.2f}', transform=ax.transAxes)
-    ax.set_xlabel(filename)
-    ax.set_ylabel('mask')
-    plt.savefig(f'plots/compare_output/corr_{filename}_mask_{z}.png',
-                dpi=300, bbox_inches='tight')
-    plt.close()
-
-    fig, ax = plt.subplots()
-    plot = ax.hexbin(data, irate, mincnt=1, linewidth=0., norm=norm)
-    cb = fig.colorbar(plot)
-    corr = stats.pearsonr(data, irate)[0]
-    ax.set_xlabel(filename)
-    ax.set_ylabel('irate')
-    ax.text(0.1, 0.9, f'corr: {corr:.2f}', transform=ax.transAxes)
-    plt.savefig(f'plots/compare_output/corr_{filename}_irate_{z}.png',
-                dpi=300, bbox_inches='tight')
-    plt.close()
-
-    fig, ax = plt.subplots()
-    plot = ax.hexbin(mask, irate, mincnt=1, linewidth=0., norm=norm)
-    cb = fig.colorbar(plot)
-    corr = stats.pearsonr(mask, irate)[0]
-    ax.set_xlabel('mask')
-    ax.set_ylabel('irate')
-    ax.text(0.1, 0.9, f'corr: {corr:.2f}', transform=ax.transAxes)
-    plt.savefig(f'plots/compare_output/corr_mask_irate_{z}.png',
-                dpi=300, bbox_inches='tight')
+    ax.set_xlabel(xdata)
+    ax.set_ylabel(ydata)
+    ax.grid(color='whitesmoke')
+    ax.set_axisbelow('True')
+    plt.savefig(f'../plots/corr/{xdata}_{ydata}_{z}.png', dpi=300,
+                bbox_inches='tight')
     plt.close()
 
 
 zs = ['6.830', '7.059', '7.480']
-filenames = ['cellcluster25', 'cellcluster50', 'cellcluster75', 'cellcluster100']
+qs = ['cellcluster25', 'cellcluster50', 'cellcluster75', 'cellcluster100',
+      'irate', 'mask', 'msrc', 'overd']
 
-for filename in filenames:
+pairs = []
+for q in qs:
+    pairs.append(('xHII', q))
+
+for (x,y) in pairs:
     for z in zs:
-        plot_corr(z, filename, filepath=filepath)
+        plot_corr(z, x, y, filepath=filepath)

@@ -4,7 +4,7 @@
 # #SBATCH --nodes=1
 
 # set max wallclock time
-#SBATCH --time=12:00:00
+#SBATCH --time=01:00:00
 
 # set name of job
 #SBATCH --job-name=Pred-AI4Reion
@@ -26,7 +26,8 @@
 #SBATCH --error gpu_logs/slurm-%j.stdout
 
 # #SBATCH --array=0-1000%100
-#SBATCH --array=17,18,20
+# #SBATCH --array=0-20
+#SBATCH --array=0-6
 
 # run the application
 
@@ -61,28 +62,29 @@ source ~/venvs/pyenv/bin/activate
 # echo "Task ${TASK_ID}/${NDOMAINS}"
 
 # NBATCH=({0..50..1})
-NBATCH=({0..7..1})
+# NBATCH=({0..7..1})
 # NBATCH=({49..50..1})
-echo ${NBATCH[@]}
+# echo ${NBATCH[@]}
 
 echo "Executing script..."
 # Execute the script for subvolume $TASK_ID
 # srun python subvolume_prediction.py $CUBESIZE $TASK_ID # &> logs/slurm-${SLURM_ARRAY_JOB_ID}_${TASK_ID}.stdout
 
-for ii in ${NBATCH[@]}
-  do
-    BATCH=$((${SLURM_ARRAY_TASK_ID} * 7))
-    TASK_ID=$((${BATCH} + ${ii} - 1))
-    echo "Task ID: ${TASK_ID}"
-    # BATCH=$((${SLURM_ARRAY_TASK_ID} * 50))
+# for ii in ${NBATCH[@]}
+#   do
+    # BATCH=$((${SLURM_ARRAY_TASK_ID} * 7))
+    # TASK_ID=$((${BATCH} + ${ii} - 1))
+    # echo "Task ID: ${TASK_ID}"
+    # BATCH=${SLURM_ARRAY_TASK_ID}
     # TASK_ID=$((${BATCH} + ${ii} - 1))
     # echo "Task ID: ${TASK_ID}"
     # python3 subvolume_prediction.py $CUBESIZE $TASK_ID
-    python3 multigpu_subvolume_predict_new.py $CUBESIZE $TASK_ID
-done
+    # python3 subvolume_predict.py $CUBESIZE $TASK_ID
+# done
 
-# python3 multigpu_subvolume_predict.py
-    
+TASK_ID=$((${SLURM_ARRAY_TASK_ID} - 1))
+python3 subvolume_predict.py $CUBESIZE $TASK_ID
+
 echo FINISHED AT `date`
 
 echo "Job done, info follows..."

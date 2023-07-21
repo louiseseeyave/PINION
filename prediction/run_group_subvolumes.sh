@@ -32,6 +32,7 @@ echo "Setting up enviroment to use MPI..."
 
 # Set how you want to split the cube.
 CUBESIZE=50
+# CUBESIZE=25
 FULLCUBESIZE=250
 
 # Here we load the different (you will have to change this, this is CSCS specific)
@@ -48,6 +49,6 @@ source ~/venvs/pyenv/bin/activate
 
 echo "Executing script..."
 # Execute the script for subvolume $TASK_ID
-python3 group_subvolumes.py $CUBESIZE $FULLCUBESIZE # &> logs/slurm-${SLURM_ARRAY_JOB_ID}_${TASK_ID}.stdout
+python3 group_subvolumes.py $CUBESIZE $FULLCUBESIZE # &> logs/grp-slurm-${SLURM_ARRAY_JOB_ID}_${TASK_ID}.stdout
 
 echo FINISHED AT `date`
